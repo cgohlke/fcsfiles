@@ -1,8 +1,8 @@
 Read fluorescence correlation spectroscopy (FCS) data files
 ===========================================================
 
-Currently only Carl Zeiss(r) ConfoCor(r) RAW and ASCII measurement data files
-are supported.
+Fcsfiles is a Python library to read Carl Zeiss(r) ConfoCor(r) RAW and ASCII
+measurement data files.
 
 :Author:
   `Christoph Gohlke <https://www.lfd.uci.edu/~gohlke/>`_
@@ -10,7 +10,7 @@ are supported.
 :Organization:
   Laboratory for Fluorescence Dynamics. University of California, Irvine
 
-:Version: 2018.8.29
+:Version: 2018.10.18
 
 Requirements
 ------------
