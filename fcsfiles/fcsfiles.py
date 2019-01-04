@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # fcsfiles.py
 
-# Copyright (c) 2012-2018, Christoph Gohlke
-# Copyright (c) 2012-2018, The Regents of the University of California
+# Copyright (c) 2012-2019, Christoph Gohlke
+# Copyright (c) 2012-2019, The Regents of the University of California
 # Produced at the Laboratory for Fluorescence Dynamics.
 # All rights reserved.
 #
@@ -43,12 +43,17 @@ measurement data files.
 :Organization:
   Laboratory for Fluorescence Dynamics. University of California, Irvine
 
-:Version: 2018.10.18
+:Version: 2019.1.1
 
 Requirements
 ------------
 * `CPython 2.7 or 3.5+ <https://www.python.org>`_
 * `Numpy 1.13 <https://www.numpy.org>`_
+
+Revisions
+---------
+2019.1.1
+    Update copyright year.
 
 Notes
 -----
@@ -108,7 +113,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import division, print_function
 
-__version__ = '2018.10.18'
+__version__ = '2019.1.1'
 __docformat__ = 'restructuredtext en'
 __all__ = 'ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount'
 
