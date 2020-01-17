@@ -1,24 +1,21 @@
-# -*- coding: utf-8 -*-
 # fcsfiles.py
 
-# Copyright (c) 2012-2019, Christoph Gohlke
-# Copyright (c) 2012-2019, The Regents of the University of California
-# Produced at the Laboratory for Fluorescence Dynamics.
+# Copyright (c) 2012-2020, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-# * Redistributions of source code must retain the above copyright notice,
-#   this list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -43,17 +40,20 @@ measurement data files.
 :Organization:
   Laboratory for Fluorescence Dynamics. University of California, Irvine
 
-:Version: 2019.1.1
+:License: BSD 3-Clause
+
+:Version: 2020.1.1
 
 Requirements
 ------------
-* `CPython 2.7 or 3.5+ <https://www.python.org>`_
-* `Numpy 1.13 <https://www.numpy.org>`_
+* `CPython >= 3.6 <https://www.python.org>`_
+* `Numpy 1.14 <https://www.numpy.org>`_
 
 Revisions
 ---------
-2019.1.1
-    Update copyright year.
+2020.1.1
+    Remove support for Python 2.7 and 3.5.
+    Update copyright.
 
 Notes
 -----
@@ -63,8 +63,6 @@ The use of this implementation may be subject to patent or license
 restrictions.
 
 The API is not stable yet and is expected to change between revisions.
-
-Python 2.7 and 3.4 are deprecated.
 
 This module does *not* read flow cytometry standard FCS files.
 
@@ -111,14 +109,11 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 """
 
-from __future__ import division, print_function
+__version__ = '2020.1.1'
 
-__version__ = '2019.1.1'
-__docformat__ = 'restructuredtext en'
-__all__ = 'ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount'
+__all__ = ('ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount')
 
 import os
-import sys
 import struct
 
 import numpy
@@ -130,17 +125,18 @@ class ConfoCor3Fcs(dict):
     No specification is available. The encoding is 'Windows-1252'.
 
     """
-    _header = 'Carl Zeiss ConfoCor3 - measurement data file - version 3.0 ANSI'
+
+    HEADER = 'Carl Zeiss ConfoCor3 - measurement data file - version 3.0 ANSI'
 
     def __init__(self, filename):
         """Read file content and parse into dictionary."""
         dict.__init__(self)
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
-        with open(filename, mode='U' if _PY2 else 'r') as fh:
+        with open(filename, mode='r') as fh:
             # encoding = 'Windows-1252'
             header = fh.read(63)
-            if header != self._header:
+            if header != ConfoCor3Fcs.HEADER:
                 raise ValueError('not a ConfoCor3 measurement data file')
             fh.readline()
             current = self
@@ -214,32 +210,31 @@ class ConfoCor3Fcs(dict):
 
     def __str__(self):
         """Return string close to original file format."""
-        result = [self._header]
+        result = [ConfoCor3Fcs.HEADER]
 
         def append(key, value, indent='', index=''):
             """Recursively append formatted keys and values to result."""
             if index != '':
                 index = str(index + 1)
             if isinstance(value, dict):
-                result.append('%sBEGIN %s%s %i' % (
-                    indent, key, index, value['_value']))
+                result.append(f'{indent}BEGIN {key}{index} {value["_value"]}')
                 for k, v in sorted(value.items(), key=sortkey):
-                    append(k, v, indent+'\t')
-                result.append('%sEND' % indent)
+                    append(k, v, indent + '\t')
+                result.append(f'{indent}END')
             elif isinstance(value, (list, tuple)):
                 for i, val in enumerate(value):
                     append(key, val, indent, i)
             elif isinstance(value, numpy.ndarray):
                 size = value.shape[0]
                 if size != 1:
-                    result.append('%s%sSize = %i' % (indent, key, size))
-                result.append('%s%s = %s' % (
+                    result.append(f'{indent}{key}Size = {size}')
+                result.append('{}{} = {}'.format(
                     indent, key, ' '.join(str(i) for i in value.shape)))
                 for i in range(size):
-                    result.append('%s%s' % (
-                        indent, '\t '.join('%.8f' % v for v in value[i])))
+                    result.append('{}{}'.format(
+                        indent, '\t '.join(f'{v:.8f}' for v in value[i])))
             elif key != '_value':
-                result.append('%s%s%s = %s' % (indent, key, index, value))
+                result.append(f'{indent}{key}{index} = {value}')
 
         def sortkey(item):
             """Sort dictionary items by key string and value type."""
@@ -259,7 +254,6 @@ class ConfoCor3Fcs(dict):
 
     def close(self):
         """Close open file."""
-        pass
 
     def __enter__(self):
         return self
@@ -268,7 +262,7 @@ class ConfoCor3Fcs(dict):
         pass
 
 
-class ConfoCor3Raw(object):
+class ConfoCor3Raw:
     """Carl Zeiss ConfoCor3 raw data file.
 
     Based on "Confocor3 Raw Data Specification. 2 May 2007. by efg, Stowers
@@ -289,7 +283,8 @@ class ConfoCor3Raw(object):
         Sampling frequency in Hz.
 
     """
-    _header = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - Channel'
+
+    HEADER = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - Channel'
 
     def __init__(self, filename):
         """Read file header."""
@@ -297,7 +292,7 @@ class ConfoCor3Raw(object):
         self._filepath, self._filename = os.path.split(filename)
         self._fh = open(filename, 'rb')
         header = self._fh.read(64)
-        if not header.startswith(self._header):
+        if not header.startswith(ConfoCor3Raw.HEADER):
             self._fh.close()
             raise ValueError('not a ConfoCor3 raw data file')
         self.file_identifier = header
@@ -314,11 +309,13 @@ class ConfoCor3Raw(object):
 
     def filename(self):
         """Return normalized file name from file content."""
-        return '%s_R%i_P%i_K%i_Ch%i.raw' % (self.measurement_identifier,
-                                            self.repetition_number + 1,
-                                            self.measurement_position + 1,
-                                            self.kinetic_index + 1,
-                                            self.channel + 1)
+        return '{}_R{}_P{}_K{}_Ch{}.raw'.format(
+            self.measurement_identifier,
+            self.repetition_number + 1,
+            self.measurement_position + 1,
+            self.kinetic_index + 1,
+            self.channel + 1
+        )
 
     def asarray(self, count=-1, skip=0, **kwargs):
         """Read data from file, perform optional binning, and return as array.
@@ -342,7 +339,7 @@ class ConfoCor3Raw(object):
             The number of events in each bin.
 
         """
-        self._fh.seek(128 + skip*4)
+        self._fh.seek(128 + skip * 4)
         times = numpy.fromfile(self._fh, dtype='<u4', count=count)
         times = times.astype('u8')
         times = numpy.cumsum(times, out=times)
@@ -352,16 +349,17 @@ class ConfoCor3Raw(object):
         return times
 
     def __str__(self):
-        """Return string with information about file."""
-        return '\n'.join((
-            self._filename.capitalize(),
-            ' (ConfoCor3 Raw Data)',
-            '* Measurement identifier: %s' % self.measurement_identifier,
-            '* Sampling frequency: %i Hz' % self.frequency,
-            '* Repetition number %i' % self.repetition_number,
-            '* Measurement position: %i' % self.measurement_position,
-            '* Kinetic index: %i' % self.kinetic_index,
-            '* Channel number: %i' % self.channel))
+        """Return string with information about ConfoCor3Raw."""
+        return '\n '.join((
+            self.__class__.__name__,
+            os.path.normpath(os.path.normcase(self.filename())),
+            f'measurement identifier: {self.measurement_identifier}',
+            f'sampling frequency: {self.frequency} Hz',
+            f'repetition number {self.repetition_number}',
+            f'measurement position: {self.measurement_position}',
+            f'kinetic index: {self.kinetic_index}',
+            f'channel number: {self.channel}',
+        ))
 
     def close(self):
         """Close open file."""
@@ -374,7 +372,7 @@ class ConfoCor3Raw(object):
         self.close()
 
 
-class ConfoCor2Raw(object):
+class ConfoCor2Raw:
     """Carl Zeiss ConfoCor2 raw data file.
 
     The LSM 510 META - ConfoCor 2 system: an integrated imaging and
@@ -394,7 +392,8 @@ class ConfoCor2Raw(object):
         Sampling frequency in Hz.
 
     """
-    _header = b'ConfoCor 2 - Raw data file 1.0'
+
+    HEADER = b'ConfoCor 2 - Raw data file 1.0'
 
     def __init__(self, filename):
         """Read file content and parse into a dictionary."""
@@ -402,7 +401,7 @@ class ConfoCor2Raw(object):
         self._filepath, self._filename = os.path.split(filename)
         self._fh = open(filename, 'rb')
         header = self._fh.read(30)
-        if not header.startswith(self._header):
+        if not header.startswith(ConfoCor2Raw.HEADER):
             self._fh.close()
             raise ValueError('not a ConfoCor 2 raw data file')
         self.file_identifier = header
@@ -432,10 +431,10 @@ class ConfoCor2Raw(object):
             If binning, the number of events in each bin for each channel.
 
         """
-        self._fh.seek(30 + skip*2)
-        data = numpy.fromfile(self._fh, dtype='u1', count=count*2)
+        self._fh.seek(30 + skip * 2)
+        data = numpy.fromfile(self._fh, dtype='u1', count=count * 2)
         # accumulate clock time
-        times = numpy.empty((len(data)//2, 4), dtype='u8')
+        times = numpy.empty((len(data) // 2, 4), dtype='u8')
         times[:, 0] = data[::2]
         times[:, 1:] = 1
         times = times.flatten()
@@ -453,11 +452,12 @@ class ConfoCor2Raw(object):
         return ch0, ch1
 
     def __str__(self):
-        """Return string with information about file."""
-        return '\n'.join((
-            self._filename.capitalize(),
-            ' (ConfoCor2 Raw Data)',
-            '* Sampling frequency: %i Hz' % self.frequency))
+        """Return string with information about ConfoCor2Raw."""
+        return '\n '.join((
+            self.__class__.__name__,
+            os.path.normpath(os.path.normcase(self.filename)),
+            f'sampling frequency: {self.frequency} Hz',
+        ))
 
     def close(self):
         """Close open file."""
@@ -520,9 +520,8 @@ def fcs_bincount(data, frequency, binsize=None, bins=None, binspm=None):
     return times, bincounts
 
 
-_PY2 = sys.version_info[0] == 2
-
 if __name__ == '__main__':
     import doctest
+
     numpy.set_printoptions(suppress=True, precision=5)
     doctest.testmod()
