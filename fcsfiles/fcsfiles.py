@@ -42,15 +42,17 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2020.1.1
+:Version: 2020.9.18
 
 Requirements
 ------------
 * `CPython >= 3.6 <https://www.python.org>`_
-* `Numpy 1.14 <https://www.numpy.org>`_
+* `Numpy 1.15.1 <https://www.numpy.org>`_
 
 Revisions
 ---------
+2020.9.18
+    Relax ConfoCor3Raw header requirement.
 2020.1.1
     Remove support for Python 2.7 and 3.5.
     Update copyright.
@@ -109,7 +111,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 """
 
-__version__ = '2020.1.1'
+__version__ = '2020.9.18'
 
 __all__ = ('ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount')
 
@@ -131,7 +133,7 @@ class ConfoCor3Fcs(dict):
     def __init__(self, filename):
         """Read file content and parse into dictionary."""
         dict.__init__(self)
-        filename = os.path.abspath(filename)
+        filename = os.path.abspath(os.fspath(filename))
         self._filepath, self._filename = os.path.split(filename)
         with open(filename, mode='r') as fh:
             # encoding = 'Windows-1252'
@@ -228,11 +230,17 @@ class ConfoCor3Fcs(dict):
                 size = value.shape[0]
                 if size != 1:
                     result.append(f'{indent}{key}Size = {size}')
-                result.append('{}{} = {}'.format(
-                    indent, key, ' '.join(str(i) for i in value.shape)))
+                result.append(
+                    '{}{} = {}'.format(
+                        indent, key, ' '.join(str(i) for i in value.shape)
+                    )
+                )
                 for i in range(size):
-                    result.append('{}{}'.format(
-                        indent, '\t '.join(f'{v:.8f}' for v in value[i])))
+                    result.append(
+                        '{}{}'.format(
+                            indent, '\t '.join(f'{v:.8f}' for v in value[i])
+                        )
+                    )
             elif key != '_value':
                 result.append(f'{indent}{key}{index} = {value}')
 
@@ -284,7 +292,7 @@ class ConfoCor3Raw:
 
     """
 
-    HEADER = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - Channel'
+    HEADER = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - '
 
     def __init__(self, filename):
         """Read file header."""
@@ -296,13 +304,15 @@ class ConfoCor3Raw:
             self._fh.close()
             raise ValueError('not a ConfoCor3 raw data file')
         self.file_identifier = header
-        self.channel = int(header.rsplit(b' ', 1)[-1]) - 1
-        (measureid,
-         self.measurement_position,
-         self.kinetic_index,
-         self.repetition_number,
-         self.frequency,
-         _) = struct.unpack('<16sIIII32s', self._fh.read(64))
+        self.channel = int(header.strip().rsplit(b' ', 1)[-1]) - 1
+        (
+            measureid,
+            self.measurement_position,
+            self.kinetic_index,
+            self.repetition_number,
+            self.frequency,
+            _,
+        ) = struct.unpack('<16sIIII32s', self._fh.read(64))
         measureid = struct.unpack('<IIII', measureid)
         measureid = ''.join(hex(int(i))[2:] for i in measureid)
         self.measurement_identifier = measureid.replace('L', '')
@@ -314,7 +324,7 @@ class ConfoCor3Raw:
             self.repetition_number + 1,
             self.measurement_position + 1,
             self.kinetic_index + 1,
-            self.channel + 1
+            self.channel + 1,
         )
 
     def asarray(self, count=-1, skip=0, **kwargs):
@@ -344,22 +354,24 @@ class ConfoCor3Raw:
         times = times.astype('u8')
         times = numpy.cumsum(times, out=times)
         if kwargs:
-            result = fcs_bincount((times, ), self.frequency, **kwargs)
+            result = fcs_bincount((times,), self.frequency, **kwargs)
             return result[0], result[1][0]
         return times
 
     def __str__(self):
         """Return string with information about ConfoCor3Raw."""
-        return '\n '.join((
-            self.__class__.__name__,
-            os.path.normpath(os.path.normcase(self.filename())),
-            f'measurement identifier: {self.measurement_identifier}',
-            f'sampling frequency: {self.frequency} Hz',
-            f'repetition number {self.repetition_number}',
-            f'measurement position: {self.measurement_position}',
-            f'kinetic index: {self.kinetic_index}',
-            f'channel number: {self.channel}',
-        ))
+        return '\n '.join(
+            (
+                self.__class__.__name__,
+                os.path.normpath(os.path.normcase(self.filename())),
+                f'measurement identifier: {self.measurement_identifier}',
+                f'sampling frequency: {self.frequency} Hz',
+                f'repetition number {self.repetition_number}',
+                f'measurement position: {self.measurement_position}',
+                f'kinetic index: {self.kinetic_index}',
+                f'channel number: {self.channel}',
+            )
+        )
 
     def close(self):
         """Close open file."""
@@ -453,11 +465,13 @@ class ConfoCor2Raw:
 
     def __str__(self):
         """Return string with information about ConfoCor2Raw."""
-        return '\n '.join((
-            self.__class__.__name__,
-            os.path.normpath(os.path.normcase(self.filename)),
-            f'sampling frequency: {self.frequency} Hz',
-        ))
+        return '\n '.join(
+            (
+                self.__class__.__name__,
+                os.path.normpath(os.path.normcase(self.filename)),
+                f'sampling frequency: {self.frequency} Hz',
+            )
+        )
 
     def close(self):
         """Close open file."""
@@ -507,10 +521,11 @@ def fcs_bincount(data, frequency, binsize=None, bins=None, binspm=None):
     for ch in data:
         ch //= int(binsize)  # ch is ndarray
     size = int(max((ch[-1] if ch.size else 0) for ch in data) + 1)
-    times = numpy.linspace(0, size * binsize / float(frequency), size,
-                           endpoint=False)
+    times = numpy.linspace(
+        0, size * binsize / float(frequency), size, endpoint=False
+    )
     # FIXME: work around https://github.com/numpy/numpy/issues/823
-    if size < 2**31:
+    if size < 2 ** 31:
         # use 32 bit signed int if possible
         data = (ch.astype('i4') for ch in data)
     else:
