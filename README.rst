@@ -12,15 +12,17 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2020.1.1
+:Version: 2020.9.18
 
 Requirements
 ------------
 * `CPython >= 3.6 <https://www.python.org>`_
-* `Numpy 1.14 <https://www.numpy.org>`_
+* `Numpy 1.15.1 <https://www.numpy.org>`_
 
 Revisions
 ---------
+2020.9.18
+    Relax ConfoCor3Raw header requirement.
 2020.1.1
     Remove support for Python 2.7 and 3.5.
     Update copyright.
