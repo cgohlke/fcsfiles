@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2020, Christoph Gohlke
+# Copyright (c) 2012-2021, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,20 +42,22 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2020.9.18
+:Version: 2021.6.6
 
 Requirements
 ------------
-* `CPython >= 3.6 <https://www.python.org>`_
+* `CPython >= 3.7 <https://www.python.org>`_
 * `Numpy 1.15.1 <https://www.numpy.org>`_
 
 Revisions
 ---------
+2021.6.6
+    Remove support for Python 3.6 (NEP 29).
 2020.9.18
     Relax ConfoCor3Raw header requirement.
+    Support os.PathLike file names.
 2020.1.1
     Remove support for Python 2.7 and 3.5.
-    Update copyright.
 
 Notes
 -----
@@ -70,7 +72,6 @@ This module does *not* read flow cytometry standard FCS files.
 
 Examples
 --------
-
 Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
@@ -111,7 +112,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 """
 
-__version__ = '2020.9.18'
+__version__ = '2021.6.6'
 
 __all__ = ('ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount')
 
@@ -135,7 +136,7 @@ class ConfoCor3Fcs(dict):
         dict.__init__(self)
         filename = os.path.abspath(os.fspath(filename))
         self._filepath, self._filename = os.path.split(filename)
-        with open(filename, mode='r') as fh:
+        with open(filename) as fh:
             # encoding = 'Windows-1252'
             header = fh.read(63)
             if header != ConfoCor3Fcs.HEADER:
