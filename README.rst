@@ -12,20 +12,22 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2020.9.18
+:Version: 2021.6.6
 
 Requirements
 ------------
-* `CPython >= 3.6 <https://www.python.org>`_
+* `CPython >= 3.7 <https://www.python.org>`_
 * `Numpy 1.15.1 <https://www.numpy.org>`_
 
 Revisions
 ---------
+2021.6.6
+    Remove support for Python 3.6 (NEP 29).
 2020.9.18
     Relax ConfoCor3Raw header requirement.
+    Support os.PathLike file names.
 2020.1.1
     Remove support for Python 2.7 and 3.5.
-    Update copyright.
 
 Notes
 -----
@@ -40,7 +42,6 @@ This module does *not* read flow cytometry standard FCS files.
 
 Examples
 --------
-
 Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
