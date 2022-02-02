@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2021, Christoph Gohlke
+# Copyright (c) 2012-2022, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,15 +42,22 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2021.6.6
+:Version: 2022.2.2
 
 Requirements
 ------------
-* `CPython >= 3.7 <https://www.python.org>`_
-* `Numpy 1.15.1 <https://www.numpy.org>`_
+This release has been tested with the following requirements and dependencies
+(other versions may work):
+
+* `CPython 3.8.10, 3.9.10, 3.10.2 64-bit <https://www.python.org>`_
+* `Numpy 1.21.5 <https://pypi.org/project/numpy/>`_
 
 Revisions
 ---------
+2022.2.2
+    Add type hints.
+    Use float64 or int64 for ConfoCor3Fcs arrays.
+    Drop support for Python 3.7 and numpy < 1.19 (NEP29).
 2021.6.6
     Remove support for Python 3.6 (NEP 29).
 2020.9.18
@@ -112,12 +119,15 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 """
 
-__version__ = '2021.6.6'
+from __future__ import annotations
 
-__all__ = ('ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount')
+__version__ = '2022.2.2'
+
+__all__ = ['ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount']
 
 import os
 import struct
+from typing import Any, BinaryIO, Sequence
 
 import numpy
 
@@ -131,7 +141,10 @@ class ConfoCor3Fcs(dict):
 
     HEADER = 'Carl Zeiss ConfoCor3 - measurement data file - version 3.0 ANSI'
 
-    def __init__(self, filename):
+    _filepath: str
+    _filename: str
+
+    def __init__(self, filename: os.PathLike | str) -> None:
         """Read file content and parse into dictionary."""
         dict.__init__(self)
         filename = os.path.abspath(os.fspath(filename))
@@ -144,33 +157,35 @@ class ConfoCor3Fcs(dict):
             fh.readline()
             current = self
             stack = []
-            array = None
+            array: list[str] | None = []
             key = None
             for line in fh:
                 line = line.lstrip()
                 if line[0].isdigit():
-                    if array:
-                        array.append(line)
-                    else:
+                    if array is None:
                         array = [line]
+                    else:
+                        array.append(line)
                     continue
                 if array:
                     shape = tuple(int(s) for s in current[key].split())
-                    array = ''.join(array)
-                    array = numpy.fromstring(array, dtype='float32', sep=' ')
-                    array = array.reshape(*shape)
-                    current[key] = array
-                    array = None
-                elif array == '':
+                    dtype = 'f8' if '.' in array[0] else 'i8'
+                    ndarray = numpy.fromstring(
+                        ''.join(array), dtype=dtype, sep=' '
+                    ).reshape(*shape)
+                    current[key] = ndarray
+                    del ndarray
+                    array = []
+                elif array is None:
                     # work around https://github.com/numpy/numpy/issues/1714
                     shape = tuple(int(s) for s in current[key].split())
                     current[key] = numpy.zeros(shape)
-                    array = None
+                    array = []
                 if line.startswith('BEGIN'):
                     stack.append(current)
-                    _, key, val = line.split()
+                    _, key, valstr = line.split()
                     key = key.strip()
-                    val = {'_value': int(val.strip())}
+                    val = {'_value': int(valstr.strip())}
                     if key[-1].isdigit():
                         key = key[:-1]
                         if key[-1].isdigit():
@@ -191,7 +206,7 @@ class ConfoCor3Fcs(dict):
                     if key.endswith('ArraySize'):
                         continue
                     if key.endswith('Array'):
-                        array = ''
+                        array = None
                     value = value.strip()
                     if value:
                         for type_t in (int, float, str):
@@ -211,17 +226,16 @@ class ConfoCor3Fcs(dict):
                     else:
                         current[key] = value
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return string close to original file format."""
         result = [ConfoCor3Fcs.HEADER]
 
-        def append(key, value, indent='', index=''):
-            """Recursively append formatted keys and values to result."""
-            if index != '':
-                index = str(index + 1)
+        def append(key: str, value, indent: str = '', index: int = -1):
+            # recursively append formatted keys and values to result
+            idxstr = str(index + 1) if index >= 0 else ''
             if isinstance(value, dict):
-                result.append(f'{indent}BEGIN {key}{index} {value["_value"]}')
-                for k, v in sorted(value.items(), key=sortkey):
+                result.append(f'{indent}BEGIN {key}{idxstr} {value["_value"]}')
+                for k, v in value.items():  # sorted(..., key=sortkey) ?
                     append(k, v, indent + '\t')
                 result.append(f'{indent}END')
             elif isinstance(value, (list, tuple)):
@@ -236,17 +250,18 @@ class ConfoCor3Fcs(dict):
                         indent, key, ' '.join(str(i) for i in value.shape)
                     )
                 )
+                fmt = '{}' if value.dtype.kind in 'iu' else '{:.8f}'
                 for i in range(size):
                     result.append(
                         '{}{}'.format(
-                            indent, '\t '.join(f'{v:.8f}' for v in value[i])
+                            indent, '\t '.join(fmt.format(v) for v in value[i])
                         )
                     )
             elif key != '_value':
-                result.append(f'{indent}{key}{index} = {value}')
+                result.append(f'{indent}{key}{idxstr} = {value}')
 
-        def sortkey(item):
-            """Sort dictionary items by key string and value type."""
+        def sortkey(item: tuple[str, Any]) -> str:
+            # sort dictionary items by key string and value type
             key, value = item
             key = key.lower()
             if isinstance(value, (list, tuple)):
@@ -257,14 +272,14 @@ class ConfoCor3Fcs(dict):
                 return '~~~' + key
             return key
 
-        for key, val in sorted(self.items(), key=sortkey):
+        for key, val in self.items():  # sorted(..., key=sortkey) ?
             append(key, val)
         return '\n'.join(result)
 
-    def close(self):
+    def close(self) -> None:
         """Close open file."""
 
-    def __enter__(self):
+    def __enter__(self) -> ConfoCor3Fcs:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -295,7 +310,18 @@ class ConfoCor3Raw:
 
     HEADER = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - '
 
-    def __init__(self, filename):
+    file_identifier: bytes
+    channel: int
+    measurement_position: int
+    kinetic_index: int
+    repetition_number: int
+    frequency: int
+    measurement_identifier: str
+    _fh: BinaryIO
+    _filepath: str
+    _filename: str
+
+    def __init__(self, filename: os.PathLike | str) -> None:
         """Read file header."""
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
@@ -318,7 +344,7 @@ class ConfoCor3Raw:
         measureid = ''.join(hex(int(i))[2:] for i in measureid)
         self.measurement_identifier = measureid.replace('L', '')
 
-    def filename(self):
+    def filename(self) -> str:
         """Return normalized file name from file content."""
         return '{}_R{}_P{}_K{}_Ch{}.raw'.format(
             self.measurement_identifier,
@@ -328,7 +354,9 @@ class ConfoCor3Raw:
             self.channel + 1,
         )
 
-    def asarray(self, count=-1, skip=0, **kwargs):
+    def asarray(
+        self, count: int = -1, skip: int = 0, **kwargs
+    ) -> tuple[numpy.ndarray, ...]:
         """Read data from file, perform optional binning, and return as array.
 
         Parameters
@@ -337,7 +365,7 @@ class ConfoCor3Raw:
             Number of data words to process. Default: -1 (all words).
         skip : int (optional)
             Number of data words to skip at beginning of stream. Default: 0.
-        kwargs : dict
+        **kwargs
             Optional argument to the 'fcs_bincount' function, specifying
             size or number of bins.
 
@@ -359,7 +387,7 @@ class ConfoCor3Raw:
             return result[0], result[1][0]
         return times
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return string with information about ConfoCor3Raw."""
         return '\n '.join(
             (
@@ -374,11 +402,11 @@ class ConfoCor3Raw:
             )
         )
 
-    def close(self):
+    def close(self) -> None:
         """Close open file."""
         self._fh.close()
 
-    def __enter__(self):
+    def __enter__(self) -> ConfoCor3Raw:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -408,7 +436,14 @@ class ConfoCor2Raw:
 
     HEADER = b'ConfoCor 2 - Raw data file 1.0'
 
-    def __init__(self, filename):
+    channels: int
+    frequency: int
+    file_identifier: bytes
+    _fh: BinaryIO
+    _filepath: str
+    _filename: str
+
+    def __init__(self, filename: os.PathLike | str) -> None:
         """Read file content and parse into a dictionary."""
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
@@ -421,7 +456,9 @@ class ConfoCor2Raw:
         self.channels = 2
         self.frequency = 20000000
 
-    def asarray(self, count=-1, skip=0, **kwargs):
+    def asarray(
+        self, count: int = -1, skip: int = 0, **kwargs
+    ) -> tuple[numpy.ndarray, ...]:
         """Read data from file, perform optional binning, and return as arrays.
 
         Parameters
@@ -430,7 +467,7 @@ class ConfoCor2Raw:
             Number of data words to process. Default: -1 (all words).
         skip : int (optional)
             Number of data words to skip at beginning of stream. Default: 0.
-        kwargs : dict
+        **kwargs
             Optional argument to the 'fcs_bincount' function, specifying
             size or number of bins.
 
@@ -464,28 +501,34 @@ class ConfoCor2Raw:
             return result[0], result[1][0], result[1][1]
         return ch0, ch1
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return string with information about ConfoCor2Raw."""
         return '\n '.join(
             (
                 self.__class__.__name__,
-                os.path.normpath(os.path.normcase(self.filename)),
+                os.path.normpath(os.path.normcase(self._filename)),
                 f'sampling frequency: {self.frequency} Hz',
             )
         )
 
-    def close(self):
+    def close(self) -> None:
         """Close open file."""
         self._fh.close()
 
-    def __enter__(self):
+    def __enter__(self) -> ConfoCor2Raw:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
 
-def fcs_bincount(data, frequency, binsize=None, bins=None, binspm=None):
+def fcs_bincount(
+    data: Sequence[numpy.ndarray],
+    frequency: float,
+    binsize: int | None = None,
+    bins: int | None = None,
+    binspm: int | None = None,
+) -> tuple[numpy.ndarray, tuple[numpy.ndarray, ...]]:
     """Count number of events in bins.
 
     Parameters
@@ -515,7 +558,7 @@ def fcs_bincount(data, frequency, binsize=None, bins=None, binspm=None):
         if bins is None:
             if binspm is None:
                 raise ValueError('missing parameter binsize, bins, or binspm')
-            binsize = (60 * frequency) // binspm
+            binsize = int(60 * frequency) // binspm
         else:
             size = int(max((ch[-1] if ch.size else 0) for ch in data))
             binsize = size // bins + 1
@@ -526,13 +569,13 @@ def fcs_bincount(data, frequency, binsize=None, bins=None, binspm=None):
         0, size * binsize / float(frequency), size, endpoint=False
     )
     # FIXME: work around https://github.com/numpy/numpy/issues/823
-    if size < 2 ** 31:
+    if size < 2**31:
         # use 32 bit signed int if possible
-        data = (ch.astype('i4') for ch in data)
+        dataiter = (ch.astype('i4') for ch in data)
     else:
         # else use a signed view; fails on 32 bit
-        data = (ch.view('i8') for ch in data)
-    bincounts = tuple(numpy.bincount(ch, minlength=size) for ch in data)
+        dataiter = (ch.view('i8') for ch in data)
+    bincounts = tuple(numpy.bincount(ch, minlength=size) for ch in dataiter)
     return times, bincounts
 
 
