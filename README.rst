@@ -12,15 +12,22 @@ measurement data files.
 
 :License: BSD 3-Clause
 
-:Version: 2021.6.6
+:Version: 2022.2.2
 
 Requirements
 ------------
-* `CPython >= 3.7 <https://www.python.org>`_
-* `Numpy 1.15.1 <https://www.numpy.org>`_
+This release has been tested with the following requirements and dependencies
+(other versions may work):
+
+* `CPython 3.8.10, 3.9.10, 3.10.2 64-bit <https://www.python.org>`_
+* `Numpy 1.21.5 <https://pypi.org/project/numpy/>`_
 
 Revisions
 ---------
+2022.2.2
+    Add type hints.
+    Use float64 or int64 for ConfoCor3Fcs arrays.
+    Drop support for Python 3.7 and numpy < 1.19 (NEP29).
 2021.6.6
     Remove support for Python 3.6 (NEP 29).
 2020.9.18
