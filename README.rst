@@ -4,40 +4,48 @@ Read fluorescence correlation spectroscopy (FCS) data files
 Fcsfiles is a Python library to read Carl Zeiss(r) ConfoCor(r) RAW and ASCII
 measurement data files.
 
-:Author:
-  `Christoph Gohlke <https://www.lfd.uci.edu/~gohlke/>`_
-
-:Organization:
-  Laboratory for Fluorescence Dynamics. University of California, Irvine
-
+:Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-
-:Version: 2022.2.2
+:Version: 2022.9.28
 
 Requirements
 ------------
+
 This release has been tested with the following requirements and dependencies
 (other versions may work):
 
-* `CPython 3.8.10, 3.9.10, 3.10.2 64-bit <https://www.python.org>`_
-* `Numpy 1.21.5 <https://pypi.org/project/numpy/>`_
+- `CPython 3.8.10, 3.9.13, 3.10.7, 3.11.0rc2 <https://www.python.org>`_
+- `Numpy 1.22.4 <https://pypi.org/project/numpy/>`_
 
 Revisions
 ---------
+
+2022.9.28
+
+- Update metadata.
+
 2022.2.2
-    Add type hints.
-    Use float64 or int64 for ConfoCor3Fcs arrays.
-    Drop support for Python 3.7 and numpy < 1.19 (NEP29).
+
+- Add type hints.
+- Use float64 or int64 for ConfoCor3Fcs arrays.
+- Drop support for Python 3.7 and numpy < 1.19 (NEP29).
+
 2021.6.6
-    Remove support for Python 3.6 (NEP 29).
+
+- Remove support for Python 3.6 (NEP 29).
+
 2020.9.18
-    Relax ConfoCor3Raw header requirement.
-    Support os.PathLike file names.
+
+- Relax ConfoCor3Raw header requirement.
+- Support os.PathLike file names.
+
 2020.1.1
-    Remove support for Python 2.7 and 3.5.
+
+- Remove support for Python 2.7 and 3.5.
 
 Notes
 -----
+
 "Carl Zeiss" and "ConfoCor" are registered trademarks of Carl Zeiss, Inc.
 
 The use of this implementation may be subject to patent or license
@@ -49,6 +57,7 @@ This module does *not* read flow cytometry standard FCS files.
 
 Examples
 --------
+
 Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
