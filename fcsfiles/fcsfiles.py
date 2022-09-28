@@ -34,40 +34,48 @@
 Fcsfiles is a Python library to read Carl Zeiss(r) ConfoCor(r) RAW and ASCII
 measurement data files.
 
-:Author:
-  `Christoph Gohlke <https://www.lfd.uci.edu/~gohlke/>`_
-
-:Organization:
-  Laboratory for Fluorescence Dynamics. University of California, Irvine
-
+:Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-
-:Version: 2022.2.2
+:Version: 2022.9.28
 
 Requirements
 ------------
+
 This release has been tested with the following requirements and dependencies
 (other versions may work):
 
-* `CPython 3.8.10, 3.9.10, 3.10.2 64-bit <https://www.python.org>`_
-* `Numpy 1.21.5 <https://pypi.org/project/numpy/>`_
+- `CPython 3.8.10, 3.9.13, 3.10.7, 3.11.0rc2 <https://www.python.org>`_
+- `Numpy 1.22.4 <https://pypi.org/project/numpy/>`_
 
 Revisions
 ---------
+
+2022.9.28
+
+- Update metadata.
+
 2022.2.2
-    Add type hints.
-    Use float64 or int64 for ConfoCor3Fcs arrays.
-    Drop support for Python 3.7 and numpy < 1.19 (NEP29).
+
+- Add type hints.
+- Use float64 or int64 for ConfoCor3Fcs arrays.
+- Drop support for Python 3.7 and numpy < 1.19 (NEP29).
+
 2021.6.6
-    Remove support for Python 3.6 (NEP 29).
+
+- Remove support for Python 3.6 (NEP 29).
+
 2020.9.18
-    Relax ConfoCor3Raw header requirement.
-    Support os.PathLike file names.
+
+- Relax ConfoCor3Raw header requirement.
+- Support os.PathLike file names.
+
 2020.1.1
-    Remove support for Python 2.7 and 3.5.
+
+- Remove support for Python 2.7 and 3.5.
 
 Notes
 -----
+
 "Carl Zeiss" and "ConfoCor" are registered trademarks of Carl Zeiss, Inc.
 
 The use of this implementation may be subject to patent or license
@@ -79,6 +87,7 @@ This module does *not* read flow cytometry standard FCS files.
 
 Examples
 --------
+
 Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
@@ -121,7 +130,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2022.2.2'
+__version__ = '2022.9.28'
 
 __all__ = ['ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount']
 
@@ -144,13 +153,12 @@ class ConfoCor3Fcs(dict):
     _filepath: str
     _filename: str
 
-    def __init__(self, filename: os.PathLike | str) -> None:
+    def __init__(self, filename: os.PathLike | str, /) -> None:
         """Read file content and parse into dictionary."""
         dict.__init__(self)
         filename = os.path.abspath(os.fspath(filename))
         self._filepath, self._filename = os.path.split(filename)
-        with open(filename) as fh:
-            # encoding = 'Windows-1252'
+        with open(filename, encoding='Windows-1252') as fh:
             header = fh.read(63)
             if header != ConfoCor3Fcs.HEADER:
                 raise ValueError('not a ConfoCor3 measurement data file')
@@ -227,7 +235,6 @@ class ConfoCor3Fcs(dict):
                         current[key] = value
 
     def __str__(self) -> str:
-        """Return string close to original file format."""
         result = [ConfoCor3Fcs.HEADER]
 
         def append(key: str, value, indent: str = '', index: int = -1):
@@ -356,7 +363,7 @@ class ConfoCor3Raw:
 
     def asarray(
         self, count: int = -1, skip: int = 0, **kwargs
-    ) -> tuple[numpy.ndarray, ...]:
+    ) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
         """Read data from file, perform optional binning, and return as array.
 
         Parameters
@@ -388,7 +395,6 @@ class ConfoCor3Raw:
         return times
 
     def __str__(self) -> str:
-        """Return string with information about ConfoCor3Raw."""
         return '\n '.join(
             (
                 self.__class__.__name__,
@@ -443,7 +449,7 @@ class ConfoCor2Raw:
     _filepath: str
     _filename: str
 
-    def __init__(self, filename: os.PathLike | str) -> None:
+    def __init__(self, filename: os.PathLike | str, /) -> None:
         """Read file content and parse into a dictionary."""
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
@@ -502,7 +508,6 @@ class ConfoCor2Raw:
         return ch0, ch1
 
     def __str__(self) -> str:
-        """Return string with information about ConfoCor2Raw."""
         return '\n '.join(
             (
                 self.__class__.__name__,
