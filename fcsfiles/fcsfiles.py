@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2022, Christoph Gohlke
+# Copyright (c) 2012-2023, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,19 +36,39 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-:Version: 2022.9.28
+:Version: 2023.8.30
+
+Quickstart
+----------
+
+Install the fcsfiles package and all dependencies from the
+`Python Package Index <https://pypi.org/project/fcsfiles/>`_::
+
+    python -m pip install -U fcsfiles
+
+See `Examples`_ for using the programming interface.
+
+Source code and support are available on
+`GitHub <https://github.com/cgohlke/fcsfiles>`_.
 
 Requirements
 ------------
 
-This release has been tested with the following requirements and dependencies
+This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython 3.8.10, 3.9.13, 3.10.7, 3.11.0rc2 <https://www.python.org>`_
-- `Numpy 1.22.4 <https://pypi.org/project/numpy/>`_
+- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.5, 3.12rc, 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 1.25.2
 
 Revisions
 ---------
+
+2023.8.30
+
+- Fix linting issues.
+- Add py.typed marker.
+- Convert to Google style docstrings.
+- Drop support for Python 3.8 and numpy < 1.22 (NEP29).
 
 2022.9.28
 
@@ -93,11 +113,20 @@ Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
 >>> fcs['FcsData']['FcsEntry'][0]['FcsDataSet']['CountRateArray'].shape
 (60000, 2)
+>>> print(fcs)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+Carl Zeiss ConfoCor3 - measurement data file - version 3.0 ANSI
+BEGIN FcsData 30000
+        Name = Fluorescein
+        Comment =
+        AverageFlags = Repeat|Position|Average_Fit_Results
+        SortOrder = Channel-Repeat-Position-Kinetics
+        BEGIN FcsEntry1 10000
+...
 
 Read data and metadata from a ConfoCor3 RAW file:
 
 >>> fcs = ConfoCor3Raw('ConfoCor3.raw')
->>> fcs.filename()
+>>> fcs.filename
 'f5ee4f36488fca2f89cb6b8626111006_R1_P1_K1_Ch1.raw'
 >>> fcs.frequency
 20000000
@@ -130,21 +159,30 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2022.9.28'
+__version__ = '2023.8.30'
 
 __all__ = ['ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount']
 
 import os
 import struct
-from typing import Any, BinaryIO, Sequence
+from typing import TYPE_CHECKING
 
 import numpy
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Any, BinaryIO
+
+    from numpy.typing import NDArray
 
 
 class ConfoCor3Fcs(dict):
     """Carl Zeiss ConfoCor3 ASCII data file.
 
     No specification is available. The encoding is 'Windows-1252'.
+
+    Parameters:
+        filename: Name of file to open.
 
     """
 
@@ -153,8 +191,8 @@ class ConfoCor3Fcs(dict):
     _filepath: str
     _filename: str
 
-    def __init__(self, filename: os.PathLike | str, /) -> None:
-        """Read file content and parse into dictionary."""
+    def __init__(self, filename: os.PathLike[Any] | str, /) -> None:
+        # read file content and parse into dictionary
         dict.__init__(self)
         filename = os.path.abspath(os.fspath(filename))
         self._filepath, self._filename = os.path.split(filename)
@@ -299,37 +337,43 @@ class ConfoCor3Raw:
     Based on "Confocor3 Raw Data Specification. 2 May 2007. by efg, Stowers
     Institute for Medical Research."
 
-    Attributes
-    ----------
-    measurement_identifier : str
-        Hex form of 4 32-bit little endian integers without leading 0.
-        It is the same for all channels of the same repetition.
-    measurement_position : int
-        Zero based measurement position.
-    kinetic_index : int
-        Zero based kinetic index.
-    repetition_number : int
-        Zero based repetition_number.
-    frequency : int
-        Sampling frequency in Hz.
+    Parameters:
+        filename: Name of file to open.
 
     """
 
     HEADER = b'Carl Zeiss ConfoCor3 - raw data file - version 3.000 - '
 
     file_identifier: bytes
+    """ConfoCor3 file header."""
+
     channel: int
+    """Number of channels."""
+
     measurement_position: int
+    """Zero based measurement position."""
+
     kinetic_index: int
+    """Zero based kinetic index."""
+
     repetition_number: int
+    """Zero based repetition number."""
+
     frequency: int
+    """Sampling frequency in Hz."""
+
     measurement_identifier: str
+    """Hex form of four 32-bit little-endian integers without leading 0.
+
+    It is the same for all channels of the same repetition.
+    """
+
     _fh: BinaryIO
     _filepath: str
     _filename: str
 
-    def __init__(self, filename: os.PathLike | str) -> None:
-        """Read file header."""
+    def __init__(self, filename: os.PathLike[Any] | str) -> None:
+        # read file header
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
         self._fh = open(filename, 'rb')
@@ -351,8 +395,9 @@ class ConfoCor3Raw:
         measureid = ''.join(hex(int(i))[2:] for i in measureid)
         self.measurement_identifier = measureid.replace('L', '')
 
+    @property
     def filename(self) -> str:
-        """Return normalized file name from file content."""
+        """Normalized name of file from file content."""
         return '{}_R{}_P{}_K{}_Ch{}.raw'.format(
             self.measurement_identifier,
             self.repetition_number + 1,
@@ -362,43 +407,42 @@ class ConfoCor3Raw:
         )
 
     def asarray(
-        self, count: int = -1, skip: int = 0, **kwargs
-    ) -> numpy.ndarray | tuple[numpy.ndarray, ...]:
-        """Read data from file, perform optional binning, and return as array.
+        self, count: int = -1, skip: int = 0, **kwargs: Any
+    ) -> NDArray[Any] | tuple[NDArray[Any], NDArray[Any]]:
+        """Return data from file, optionally binned.
 
-        Parameters
-        ----------
-        count : int (optional)
-            Number of data words to process. Default: -1 (all words).
-        skip : int (optional)
-            Number of data words to skip at beginning of stream. Default: 0.
-        **kwargs
-            Optional argument to the 'fcs_bincount' function, specifying
-            size or number of bins.
+        Parameters:
+            count:
+                Number of data words to process.
+                By default, all data is processed.
+            skip:
+                Number of data words to skip at beginning of stream.
+            **kwargs
+                Optional arguments to :py:func:`fcs_bincount`,
+                specifying size or number of bins.
 
-        Returns
-        -------
-        times : ndarray
-            The lower range of the bins in units of seconds, or, if 'binsize'
-            is 0, the times of the events in detector clock units.
-        bincounts : ndarray
-            The number of events in each bin.
+        Returns:
+            One or two arrays.
+
+            1. Lower range of bins in units of seconds.
+            2. If binning, times of events in detector clock units and
+               number of events in each bin.
 
         """
         self._fh.seek(128 + skip * 4)
         times = numpy.fromfile(self._fh, dtype='<u4', count=count)
         times = times.astype('u8')
         times = numpy.cumsum(times, out=times)
-        if kwargs:
-            result = fcs_bincount((times,), self.frequency, **kwargs)
-            return result[0], result[1][0]
-        return times
+        if not kwargs:
+            return times
+        result = fcs_bincount((times,), self.frequency, **kwargs)
+        return result[0], result[1][0]
 
     def __str__(self) -> str:
         return '\n '.join(
             (
                 self.__class__.__name__,
-                os.path.normpath(os.path.normcase(self.filename())),
+                os.path.normpath(os.path.normcase(self.filename)),
                 f'measurement identifier: {self.measurement_identifier}',
                 f'sampling frequency: {self.frequency} Hz',
                 f'repetition number {self.repetition_number}',
@@ -433,24 +477,28 @@ class ConfoCor2Raw:
     Carl Zeiss Advanced Imaging Microscopy claims a patent on the file format
     and data compression scheme.
 
-    Attributes
-    ----------
-    frequency : int
-        Sampling frequency in Hz.
+    Parameters:
+        filename: Name of file to open.
 
     """
 
     HEADER = b'ConfoCor 2 - Raw data file 1.0'
 
-    channels: int
-    frequency: int
     file_identifier: bytes
+    """ConfoCor 2 file header."""
+
+    channels: int
+    """Number of channels (always 2)."""
+
+    frequency: int
+    """Sampling frequency in Hz."""
+
     _fh: BinaryIO
     _filepath: str
     _filename: str
 
-    def __init__(self, filename: os.PathLike | str, /) -> None:
-        """Read file content and parse into a dictionary."""
+    def __init__(self, filename: os.PathLike[Any] | str, /) -> None:
+        # read file content and parse into a dictionary
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
         self._fh = open(filename, 'rb')
@@ -463,32 +511,32 @@ class ConfoCor2Raw:
         self.frequency = 20000000
 
     def asarray(
-        self, count: int = -1, skip: int = 0, **kwargs
-    ) -> tuple[numpy.ndarray, ...]:
-        """Read data from file, perform optional binning, and return as arrays.
+        self, count: int = -1, skip: int = 0, **kwargs: Any
+    ) -> tuple[NDArray[Any], ...]:
+        """Return data from file, optionally binned.
 
-        Parameters
-        ----------
-        count : int (optional)
-            Number of data words to process. Default: -1 (all words).
-        skip : int (optional)
-            Number of data words to skip at beginning of stream. Default: 0.
-        **kwargs
-            Optional argument to the 'fcs_bincount' function, specifying
-            size or number of bins.
+        Parameters:
+            count:
+                Number of data words to process.
+                By default, all data is processed.
+            skip:
+                Number of data words to skip at beginning of stream.
+            **kwargs
+                Optional arguments to :py:func:`fcs_bincount`,
+                specifying size or number of bins.
 
-        Returns
-        -------
-        times : ndarray
-            If binning, the lower range of the bins in units of seconds.
-            Otherwise (default), the times of the events in detector clock
-            units for each channel.
-        Bincounts : ndarray
-            If binning, the number of events in each bin for each channel.
+        Returns:
+            Two or three arrays.
+
+            2. Times of events in detector clock units for both channels.
+            3. If binning, lower range of bins in units of seconds and
+               number of events in each bin for both channels.
 
         """
         self._fh.seek(30 + skip * 2)
-        data = numpy.fromfile(self._fh, dtype='u1', count=count * 2)
+        data = numpy.fromfile(
+            self._fh, dtype='u1', count=count * 2 if count >= 0 else -1
+        )
         # accumulate clock time
         times = numpy.empty((len(data) // 2, 4), dtype='u8')
         times[:, 0] = data[::2]
@@ -500,12 +548,12 @@ class ConfoCor2Raw:
         data &= numpy.array([1, 2, 4, 8, 16, 32, 64, 128], dtype='u1')
         ch0 = numpy.take(times, numpy.where(data[:, 0::2].flatten() != 0)[0])
         ch1 = numpy.take(times, numpy.where(data[:, 1::2].flatten() != 0)[0])
+        if not kwargs:
+            return ch0, ch1
         del data
         del times
-        if kwargs:
-            result = fcs_bincount((ch0, ch1), self.frequency, **kwargs)
-            return result[0], result[1][0], result[1][1]
-        return ch0, ch1
+        result = fcs_bincount((ch0, ch1), self.frequency, **kwargs)
+        return result[0], result[1][0], result[1][1]
 
     def __str__(self) -> str:
         return '\n '.join(
@@ -528,34 +576,30 @@ class ConfoCor2Raw:
 
 
 def fcs_bincount(
-    data: Sequence[numpy.ndarray],
+    data: Sequence[NDArray[Any]],
     frequency: float,
     binsize: int | None = None,
     bins: int | None = None,
     binspm: int | None = None,
-) -> tuple[numpy.ndarray, tuple[numpy.ndarray, ...]]:
+) -> tuple[NDArray[Any], tuple[NDArray[Any], ...]]:
     """Count number of events in bins.
 
-    Parameters
-    ----------
-    data : tuple of ndarray
-        For each channel, the times of events in detector clock units.
-    frequency : int
-        Sampling frequency in Hz.
-    binsize : int
-        Time interval, as a multiple of the sampling frequency, in which
-        to bin events.
-    bins : int
-        If 'binsize' is None, the number of bins.
-    binspm : int
-        If 'binsize' and 'bins' are None, the number of bins per minute (60s).
+    Parameters:
+        data:
+            Times of events in detector clock units for each channel.
+        frequency:
+            Sampling frequency in Hz.
+        binsize:
+            Time interval in multiple of sampling frequency, in which to bin
+            events.
+        bins:
+            Number of bins if `binsize` is *None*.
+        binspm:
+            Number of bins per minute if `binsize` and `bins` are *None*.
 
-    Returns
-    -------
-    times : ndarray
-        The lower range of the bins in units of seconds.
-    bincounts : tuple of ndarray
-        For each channel, the number of events in each bin.
+    Returns:
+        - Lower range of bins in units of seconds.
+        - Number of events in each bin for each channel.
 
     """
     assert type(data) in (tuple, list)
