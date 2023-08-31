@@ -6,19 +6,39 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-:Version: 2022.9.28
+:Version: 2023.8.30
+
+Quickstart
+----------
+
+Install the fcsfiles package and all dependencies from the
+`Python Package Index <https://pypi.org/project/fcsfiles/>`_::
+
+    python -m pip install -U fcsfiles
+
+See `Examples`_ for using the programming interface.
+
+Source code and support are available on
+`GitHub <https://github.com/cgohlke/fcsfiles>`_.
 
 Requirements
 ------------
 
-This release has been tested with the following requirements and dependencies
+This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython 3.8.10, 3.9.13, 3.10.7, 3.11.0rc2 <https://www.python.org>`_
-- `Numpy 1.22.4 <https://pypi.org/project/numpy/>`_
+- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.5, 3.12rc, 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 1.25.2
 
 Revisions
 ---------
+
+2023.8.30
+
+- Fix linting issues.
+- Add py.typed marker.
+- Convert to Google style docstrings.
+- Drop support for Python 3.8 and numpy < 1.22 (NEP29).
 
 2022.9.28
 
@@ -63,11 +83,20 @@ Read the CountRateArray from a ConfoCor3 ASCII file as a numpy array:
 >>> fcs = ConfoCor3Fcs('ConfoCor3.fcs')
 >>> fcs['FcsData']['FcsEntry'][0]['FcsDataSet']['CountRateArray'].shape
 (60000, 2)
+>>> print(fcs)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+Carl Zeiss ConfoCor3 - measurement data file - version 3.0 ANSI
+BEGIN FcsData 30000
+        Name = Fluorescein
+        Comment =
+        AverageFlags = Repeat|Position|Average_Fit_Results
+        SortOrder = Channel-Repeat-Position-Kinetics
+        BEGIN FcsEntry1 10000
+...
 
 Read data and metadata from a ConfoCor3 RAW file:
 
 >>> fcs = ConfoCor3Raw('ConfoCor3.raw')
->>> fcs.filename()
+>>> fcs.filename
 'f5ee4f36488fca2f89cb6b8626111006_R1_P1_K1_Ch1.raw'
 >>> fcs.frequency
 20000000
