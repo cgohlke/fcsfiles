@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2023, Christoph Gohlke
+# Copyright (c) 2012-2024, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-:Version: 2023.8.30
+:Version: 2024.5.24
 
 Quickstart
 ----------
@@ -57,11 +57,16 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.5, 3.12rc, 64-bit
-- `NumPy <https://pypi.org/project/numpy/>`_ 1.25.2
+- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.9, 3.12.3
+- `NumPy <https://pypi.org/project/numpy>`_ 1.26.4
 
 Revisions
 ---------
+
+2024.5.24
+
+- Support NumPy 2.
+- Fix docstring examples not correctly rendered on GitHub.
 
 2023.8.30
 
@@ -159,7 +164,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2023.8.30'
+__version__ = '2024.5.24'
 
 __all__ = ['ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount']
 
