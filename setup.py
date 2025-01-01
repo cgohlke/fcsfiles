@@ -85,7 +85,7 @@ setup(
     },
     packages=['fcsfiles'],
     package_data={'fcsfiles': ['py.typed']},
-    python_requires='>=3.9',
+    python_requires='>=3.10',
     install_requires=['numpy'],
     platforms=['any'],
     classifiers=[
@@ -95,9 +95,9 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
     ],
 )
