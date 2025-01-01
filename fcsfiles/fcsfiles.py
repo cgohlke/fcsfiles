@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2024, Christoph Gohlke
+# Copyright (c) 2012-2025, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-:Version: 2024.5.24
+:Version: 2025.1.1
 
 Quickstart
 ----------
@@ -57,11 +57,16 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.9, 3.12.3
-- `NumPy <https://pypi.org/project/numpy>`_ 1.26.4
+- `CPython <https://www.python.org>`_ 3.10.11, 3.11.9, 3.12.8, 3.13.1 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 2.1.3
 
 Revisions
 ---------
+
+2025.1.1
+
+- Improve type hints.
+- Drop support for Python 3.9, support Python 3.13.
 
 2024.5.24
 
@@ -87,7 +92,7 @@ Revisions
 
 2021.6.6
 
-- Remove support for Python 3.6 (NEP 29).
+- Drop support for Python 3.6 (NEP 29).
 
 2020.9.18
 
@@ -96,7 +101,7 @@ Revisions
 
 2020.1.1
 
-- Remove support for Python 2.7 and 3.5.
+- Drop support for Python 2.7 and 3.5.
 
 Notes
 -----
@@ -136,12 +141,12 @@ Read data and metadata from a ConfoCor3 RAW file:
 >>> fcs.frequency
 20000000
 >>> times = fcs.asarray()
->>> times[10858]
+>>> int(times[10858])
 1199925494
 >>> times, bincounts = fcs.asarray(bins=1000)
 >>> times.shape
 (1000,)
->>> bincounts[618]
+>>> int(bincounts[618])
 23
 >>> fcs.close()
 
@@ -151,12 +156,12 @@ Read data and metadata from a ConfoCor2 RAW file:
 >>> fcs.frequency
 20000000
 >>> ch0, ch1 = fcs.asarray()
->>> ch1[4812432]
+>>> int(ch1[4812432])
 999999833
 >>> times, ch0, ch1 = fcs.asarray(bins=1000)
 >>> times.shape
 (1000,)
->>> ch1[428]
+>>> int(ch1[428])
 10095
 >>> fcs.close()
 
@@ -164,24 +169,30 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2024.5.24'
+__version__ = '2025.1.1'
 
-__all__ = ['ConfoCor3Fcs', 'ConfoCor3Raw', 'ConfoCor2Raw', 'fcs_bincount']
+__all__ = [
+    '__version__',
+    'ConfoCor3Fcs',
+    'ConfoCor3Raw',
+    'ConfoCor2Raw',
+    'fcs_bincount',
+]
 
 import os
 import struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any, BinaryIO
+    from typing import BinaryIO
 
     from numpy.typing import NDArray
 
 
-class ConfoCor3Fcs(dict):
+class ConfoCor3Fcs(dict[str, Any]):
     """Carl Zeiss ConfoCor3 ASCII data file.
 
     No specification is available. The encoding is 'Windows-1252'.
@@ -198,6 +209,7 @@ class ConfoCor3Fcs(dict):
 
     def __init__(self, filename: os.PathLike[Any] | str, /) -> None:
         # read file content and parse into dictionary
+        value: Any
         dict.__init__(self)
         filename = os.path.abspath(os.fspath(filename))
         self._filepath, self._filename = os.path.split(filename)
@@ -209,7 +221,7 @@ class ConfoCor3Fcs(dict):
             current = self
             stack = []
             array: list[str] | None = []
-            key = None
+            key: str | None = None
             for line in fh:
                 line = line.lstrip()
                 if line[0].isdigit():
@@ -219,6 +231,7 @@ class ConfoCor3Fcs(dict):
                         array.append(line)
                     continue
                 if array:
+                    assert key is not None
                     shape = tuple(int(s) for s in current[key].split())
                     dtype = 'f8' if '.' in array[0] else 'i8'
                     ndarray = numpy.fromstring(
@@ -229,6 +242,7 @@ class ConfoCor3Fcs(dict):
                     array = []
                 elif array is None:
                     # work around https://github.com/numpy/numpy/issues/1714
+                    assert key is not None
                     shape = tuple(int(s) for s in current[key].split())
                     current[key] = numpy.zeros(shape)
                     array = []
@@ -280,7 +294,9 @@ class ConfoCor3Fcs(dict):
     def __str__(self) -> str:
         result = [ConfoCor3Fcs.HEADER]
 
-        def append(key: str, value, indent: str = '', index: int = -1):
+        def append(
+            key: str, value: Any, indent: str = '', index: int = -1
+        ) -> None:
             # recursively append formatted keys and values to result
             idxstr = str(index + 1) if index >= 0 else ''
             if isinstance(value, dict):
@@ -332,7 +348,7 @@ class ConfoCor3Fcs(dict):
     def __enter__(self) -> ConfoCor3Fcs:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         pass
 
 
@@ -464,7 +480,7 @@ class ConfoCor3Raw:
     def __enter__(self) -> ConfoCor3Raw:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         self.close()
 
 
@@ -576,7 +592,7 @@ class ConfoCor2Raw:
     def __enter__(self) -> ConfoCor2Raw:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         self.close()
 
 
