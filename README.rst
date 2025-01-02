@@ -9,7 +9,7 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD 3-Clause
-:Version: 2024.5.24
+:Version: 2025.1.1
 
 Quickstart
 ----------
@@ -30,11 +30,16 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.9.13, 3.10.11, 3.11.9, 3.12.3
-- `NumPy <https://pypi.org/project/numpy>`_ 1.26.4
+- `CPython <https://www.python.org>`_ 3.10.11, 3.11.9, 3.12.8, 3.13.1 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 2.1.3
 
 Revisions
 ---------
+
+2025.1.1
+
+- Improve type hints.
+- Drop support for Python 3.9, support Python 3.13.
 
 2024.5.24
 
@@ -60,7 +65,7 @@ Revisions
 
 2021.6.6
 
-- Remove support for Python 3.6 (NEP 29).
+- Drop support for Python 3.6 (NEP 29).
 
 2020.9.18
 
@@ -69,7 +74,7 @@ Revisions
 
 2020.1.1
 
-- Remove support for Python 2.7 and 3.5.
+- Drop support for Python 2.7 and 3.5.
 
 Notes
 -----
@@ -113,12 +118,12 @@ Read data and metadata from a ConfoCor3 RAW file:
     >>> fcs.frequency
     20000000
     >>> times = fcs.asarray()
-    >>> times[10858]
+    >>> int(times[10858])
     1199925494
     >>> times, bincounts = fcs.asarray(bins=1000)
     >>> times.shape
     (1000,)
-    >>> bincounts[618]
+    >>> int(bincounts[618])
     23
     >>> fcs.close()
 
@@ -130,11 +135,11 @@ Read data and metadata from a ConfoCor2 RAW file:
     >>> fcs.frequency
     20000000
     >>> ch0, ch1 = fcs.asarray()
-    >>> ch1[4812432]
+    >>> int(ch1[4812432])
     999999833
     >>> times, ch0, ch1 = fcs.asarray(bins=1000)
     >>> times.shape
     (1000,)
-    >>> ch1[428]
+    >>> int(ch1[428])
     10095
     >>> fcs.close()
