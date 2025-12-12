@@ -35,8 +35,9 @@ Fcsfiles is a Python library to read Carl Zeiss(r) ConfoCor(r) RAW and ASCII
 measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
-:License: BSD 3-Clause
-:Version: 2025.1.1
+:License: BSD-3-Clause
+:Version: 2025.12.12
+:DOI: `10.5281/zenodo.17905094 <https://doi.org/10.5281/zenodo.17905094>`_
 
 Quickstart
 ----------
@@ -57,11 +58,15 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.10.11, 3.11.9, 3.12.8, 3.13.1 64-bit
-- `NumPy <https://pypi.org/project/numpy/>`_ 2.1.3
+- `CPython <https://www.python.org>`_ 3.11.9, 3.12.8, 3.13.11, 3.14.2 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 2.3.5
 
 Revisions
 ---------
+
+2025.12.12
+
+- Drop support for Python 3.10, support Python 3.14.
 
 2025.1.1
 
@@ -169,13 +174,13 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2025.1.1'
+__version__ = '2025.12.12'
 
 __all__ = [
-    '__version__',
+    'ConfoCor2Raw',
     'ConfoCor3Fcs',
     'ConfoCor3Raw',
-    'ConfoCor2Raw',
+    '__version__',
     'fcs_bincount',
 ]
 
@@ -187,7 +192,8 @@ import numpy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import BinaryIO
+    from types import TracebackType
+    from typing import BinaryIO, Self
 
     from numpy.typing import NDArray
 
@@ -223,7 +229,7 @@ class ConfoCor3Fcs(dict[str, Any]):
             array: list[str] | None = []
             key: str | None = None
             for line in fh:
-                line = line.lstrip()
+                line = line.lstrip()  # noqa: PLW2901
                 if line[0].isdigit():
                     if array is None:
                         array = [line]
@@ -317,12 +323,11 @@ class ConfoCor3Fcs(dict[str, Any]):
                     )
                 )
                 fmt = '{}' if value.dtype.kind in 'iu' else '{:.8f}'
-                for i in range(size):
-                    result.append(
-                        '{}{}'.format(
-                            indent, '\t '.join(fmt.format(v) for v in value[i])
-                        )
-                    )
+                sep = '\t '
+                result.extend(
+                    f'{indent}{sep.join(fmt.format(v) for v in value[i])}'
+                    for i in range(size)
+                )
             elif key != '_value':
                 result.append(f'{indent}{key}{idxstr} = {value}')
 
@@ -345,10 +350,15 @@ class ConfoCor3Fcs(dict[str, Any]):
     def close(self) -> None:
         """Close open file."""
 
-    def __enter__(self) -> ConfoCor3Fcs:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         pass
 
 
@@ -397,7 +407,7 @@ class ConfoCor3Raw:
         # read file header
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
-        self._fh = open(filename, 'rb')
+        self._fh = open(filename, 'rb')  # noqa: SIM115
         header = self._fh.read(64)
         if not header.startswith(ConfoCor3Raw.HEADER):
             self._fh.close()
@@ -413,18 +423,18 @@ class ConfoCor3Raw:
             _,
         ) = struct.unpack('<16sIIII32s', self._fh.read(64))
         measureid = struct.unpack('<IIII', measureid)
-        measureid = ''.join(hex(int(i))[2:] for i in measureid)
+        measureid = ''.join(f'{i:x}' for i in measureid)
         self.measurement_identifier = measureid.replace('L', '')
 
     @property
     def filename(self) -> str:
         """Normalized name of file from file content."""
-        return '{}_R{}_P{}_K{}_Ch{}.raw'.format(
-            self.measurement_identifier,
-            self.repetition_number + 1,
-            self.measurement_position + 1,
-            self.kinetic_index + 1,
-            self.channel + 1,
+        return (
+            f'{self.measurement_identifier}'
+            f'_R{self.repetition_number + 1}'
+            f'_P{self.measurement_position + 1}'
+            f'_K{self.kinetic_index + 1}'
+            f'_Ch{self.channel + 1}.raw'
         )
 
     def asarray(
@@ -477,10 +487,15 @@ class ConfoCor3Raw:
         """Close open file."""
         self._fh.close()
 
-    def __enter__(self) -> ConfoCor3Raw:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
 
@@ -522,7 +537,7 @@ class ConfoCor2Raw:
         # read file content and parse into a dictionary
         filename = os.path.abspath(filename)
         self._filepath, self._filename = os.path.split(filename)
-        self._fh = open(filename, 'rb')
+        self._fh = open(filename, 'rb')  # noqa: SIM115
         header = self._fh.read(30)
         if not header.startswith(ConfoCor2Raw.HEADER):
             self._fh.close()
@@ -559,7 +574,7 @@ class ConfoCor2Raw:
             self._fh, dtype='u1', count=count * 2 if count >= 0 else -1
         )
         # accumulate clock time
-        times = numpy.empty((len(data) // 2, 4), dtype='u8')
+        times: NDArray[Any] = numpy.empty((len(data) // 2, 4), dtype='u8')
         times[:, 0] = data[::2]
         times[:, 1:] = 1
         times = times.flatten()
@@ -589,10 +604,15 @@ class ConfoCor2Raw:
         """Close open file."""
         self._fh.close()
 
-    def __enter__(self) -> ConfoCor2Raw:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
 
@@ -633,7 +653,7 @@ def fcs_bincount(
             size = int(max((ch[-1] if ch.size else 0) for ch in data))
             binsize = size // bins + 1
     for ch in data:
-        ch //= int(binsize)  # ch is ndarray
+        ch //= int(binsize)  # noqa: PLW2901 - ch is ndarray
     size = int(max((ch[-1] if ch.size else 0) for ch in data) + 1)
     times = numpy.linspace(
         0, size * binsize / float(frequency), size, endpoint=False
@@ -647,10 +667,3 @@ def fcs_bincount(
         dataiter = (ch.view('i8') for ch in data)
     bincounts = tuple(numpy.bincount(ch, minlength=size) for ch in dataiter)
     return times, bincounts
-
-
-if __name__ == '__main__':
-    import doctest
-
-    numpy.set_printoptions(suppress=True, precision=5)
-    doctest.testmod()
