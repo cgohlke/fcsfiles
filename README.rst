@@ -8,8 +8,9 @@ Fcsfiles is a Python library to read Carl Zeiss(r) ConfoCor(r) RAW and ASCII
 measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
-:License: BSD 3-Clause
-:Version: 2025.1.1
+:License: BSD-3-Clause
+:Version: 2025.12.12
+:DOI: `10.5281/zenodo.17905094 <https://doi.org/10.5281/zenodo.17905094>`_
 
 Quickstart
 ----------
@@ -30,11 +31,15 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.10.11, 3.11.9, 3.12.8, 3.13.1 64-bit
-- `NumPy <https://pypi.org/project/numpy/>`_ 2.1.3
+- `CPython <https://www.python.org>`_ 3.11.9, 3.12.8, 3.13.11, 3.14.2 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 2.3.5
 
 Revisions
 ---------
+
+2025.12.12
+
+- Drop support for Python 3.10, support Python 3.14.
 
 2025.1.1
 
