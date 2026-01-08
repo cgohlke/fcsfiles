@@ -1,6 +1,6 @@
 # fcsfiles.py
 
-# Copyright (c) 2012-2025, Christoph Gohlke
+# Copyright (c) 2012-2026, Christoph Gohlke
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ measurement data files.
 
 :Author: `Christoph Gohlke <https://www.cgohlke.com>`_
 :License: BSD-3-Clause
-:Version: 2025.12.12
+:Version: 2026.1.8
 :DOI: `10.5281/zenodo.17905094 <https://doi.org/10.5281/zenodo.17905094>`_
 
 Quickstart
@@ -58,11 +58,15 @@ Requirements
 This revision was tested with the following requirements and dependencies
 (other versions may work):
 
-- `CPython <https://www.python.org>`_ 3.11.9, 3.12.8, 3.13.11, 3.14.2 64-bit
-- `NumPy <https://pypi.org/project/numpy/>`_ 2.3.5
+- `CPython <https://www.python.org>`_ 3.11.9, 3.12.10, 3.13.11, 3.14.2 64-bit
+- `NumPy <https://pypi.org/project/numpy/>`_ 2.4.0
 
 Revisions
 ---------
+
+2026.1.8
+
+- Improve code quality.
 
 2025.12.12
 
@@ -75,38 +79,9 @@ Revisions
 
 2024.5.24
 
-- Support NumPy 2.
-- Fix docstring examples not correctly rendered on GitHub.
+- …
 
-2023.8.30
-
-- Fix linting issues.
-- Add py.typed marker.
-- Convert to Google style docstrings.
-- Drop support for Python 3.8 and numpy < 1.22 (NEP29).
-
-2022.9.28
-
-- Update metadata.
-
-2022.2.2
-
-- Add type hints.
-- Use float64 or int64 for ConfoCor3Fcs arrays.
-- Drop support for Python 3.7 and numpy < 1.19 (NEP29).
-
-2021.6.6
-
-- Drop support for Python 3.6 (NEP 29).
-
-2020.9.18
-
-- Relax ConfoCor3Raw header requirement.
-- Support os.PathLike file names.
-
-2020.1.1
-
-- Drop support for Python 2.7 and 3.5.
+Refer to the CHANGES file for older revisions.
 
 Notes
 -----
@@ -174,7 +149,7 @@ Read data and metadata from a ConfoCor2 RAW file:
 
 from __future__ import annotations
 
-__version__ = '2025.12.12'
+__version__ = '2026.1.8'
 
 __all__ = [
     'ConfoCor2Raw',
@@ -222,7 +197,8 @@ class ConfoCor3Fcs(dict[str, Any]):
         with open(filename, encoding='Windows-1252') as fh:
             header = fh.read(63)
             if header != ConfoCor3Fcs.HEADER:
-                raise ValueError('not a ConfoCor3 measurement data file')
+                msg = 'not a ConfoCor3 measurement data file'
+                raise ValueError(msg)
             fh.readline()
             current = self
             stack = []
@@ -242,7 +218,7 @@ class ConfoCor3Fcs(dict[str, Any]):
                     dtype = 'f8' if '.' in array[0] else 'i8'
                     ndarray = numpy.fromstring(
                         ''.join(array), dtype=dtype, sep=' '
-                    ).reshape(*shape)
+                    ).reshape(shape)
                     current[key] = ndarray
                     del ndarray
                     array = []
@@ -411,7 +387,8 @@ class ConfoCor3Raw:
         header = self._fh.read(64)
         if not header.startswith(ConfoCor3Raw.HEADER):
             self._fh.close()
-            raise ValueError('not a ConfoCor3 raw data file')
+            msg = 'not a ConfoCor3 raw data file'
+            raise ValueError(msg)
         self.file_identifier = header
         self.channel = int(header.strip().rsplit(b' ', 1)[-1]) - 1
         (
@@ -541,7 +518,8 @@ class ConfoCor2Raw:
         header = self._fh.read(30)
         if not header.startswith(ConfoCor2Raw.HEADER):
             self._fh.close()
-            raise ValueError('not a ConfoCor 2 raw data file')
+            msg = 'not a ConfoCor 2 raw data file'
+            raise ValueError(msg)
         self.file_identifier = header
         self.channels = 2
         self.frequency = 20000000
@@ -580,7 +558,7 @@ class ConfoCor2Raw:
         times = times.flatten()
         numpy.cumsum(times, out=times)
         # extract events for each channel
-        data = numpy.repeat(data[1::2], 8).reshape(-1, 8)
+        data = numpy.repeat(data[1::2], 8).reshape((-1, 8))
         data &= numpy.array([1, 2, 4, 8, 16, 32, 64, 128], dtype='u1')
         ch0 = numpy.take(times, numpy.where(data[:, 0::2].flatten() != 0)[0])
         ch1 = numpy.take(times, numpy.where(data[:, 1::2].flatten() != 0)[0])
@@ -647,7 +625,8 @@ def fcs_bincount(
     if binsize is None:
         if bins is None:
             if binspm is None:
-                raise ValueError('missing parameter binsize, bins, or binspm')
+                msg = 'missing parameter binsize, bins, or binspm'
+                raise ValueError(msg)
             binsize = int(60 * frequency) // binspm
         else:
             size = int(max((ch[-1] if ch.size else 0) for ch in data))
